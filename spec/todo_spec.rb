@@ -1,4 +1,5 @@
 describe Todo do
+  before(:each) { Todo.class_variable_set :@@todos, [] }
   # Initialisation
   it 'should initialise with both arguments' do
     todo = Todo.new('Remember the milk', Date.parse('21 Feb 2015'))
