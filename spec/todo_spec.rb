@@ -75,4 +75,19 @@ describe Todo do
     todo6 = Todo.new('Remember the milk')
     expect(Todo.find(exactly: 'Remember the milk')).to eq [todo1, todo6]
   end
+
+  it 'should allow us to sync with the online todos service' do
+    todo1 = Todo.new('Remember the milk')
+    todo2 = Todo.new('Buy a newspaper')
+    todo3 = Todo.new('Do the washing up')
+    todo4 = Todo.new('Buy some soya milk')
+    todo5 = Todo.new('Go to sleep')
+    todo6 = Todo.new('Remember the milk')
+    Todo.sync
+    Todo.class_variable_set :@@todos, []
+    Todo.sync
+    expect(Todo.all).to eq [todo1, todo2, todo3, todo4, todo5, todo6]
+    # Objects received won't be the same. Needs updating
+    # might need changing to "(Todo.all.include? [todos]).to eq true
+  end
 end
