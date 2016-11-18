@@ -3,17 +3,17 @@ Object oriented Ruby project. Created using test driven development (TDD).
 
 ## Specification
 ```Ruby
-Todo.new("Remember the Milk", Date.today)
+Todo.new("Remember the milk", Date.today)
 Todo.all #=> [<#Todo>, <#Todo>]
 Todo.last #=> The latest Todo
-Todo.find contains: "Milk"
-Todo.find exactly: "Remember the Milk"
+Todo.find contains: "milk"
+Todo.find exactly: "Remember the milk"
 
-a = Todo.new("Buy a Newspaper") # Default dte should be today
-a.title
-a.due_date
-a.title = "Some new Titls"
-a.due_date = Date.parse("xxx") # Should only accept date objects
+todo = Todo.new("Buy a newspaper") # Default date should be today
+todo.title
+todo.due_date
+todo.title = "Some new title"
+todo.due_date = Date.parse("2016-02-19") # Should only accept date objects
 
 Todo.sync # Should Synchronise with online Todos Service. This is HARD!
 ```
