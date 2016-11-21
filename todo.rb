@@ -35,16 +35,24 @@ class Todo # :nodoc:
 
   def self.sync
     attr_accessor :id
+    puts "Syncing todos..."
     current_ids = get_current_ids
     local_ids = Todo.all.collect { |todo| todo.id }
     current_ids.each { |id| get_todo(id, local_ids, current_ids) }
-    Todo.all.each { |todo| todo.id = generate_id(current_ids) if todo.id.nil? }
-    unless current_ids.include? todo.id # Only todos that we didn't just 'get' should be 'put'
-      HTTParty.put(
-        "http://lacedeamon.spartaglobal.com/todos/#{todo.id}?\
-        title=#{todo.title}\
-        &due=#{todo.due_date}"
-      )
+    Todo.all.each do |todo|
+      if todo.id.nil?
+        todo.id = HTTParty.post(
+          "http://lacedeamon.spartaglobal.com/todos?"\
+          "title=#{todo.title}&"\
+          "due=#{todo.due_date}"
+        )['id']
+      elsif not current_ids.include? todo.id # Only todos that we didn't just 'get' should be 'put'
+        HTTParty.put(
+          "http://lacedeamon.spartaglobal.com/todos/#{todo.id}?"\
+          "title=#{todo.title}&"\
+          "due=#{todo.due_date}"
+        )
+      end
     end
     undef :id, :id=
   end
@@ -56,15 +64,13 @@ class Todo # :nodoc:
   end
 
   def self.get_todo(id, local_ids, current_ids)
-    puts "Getting todos... (#{current_ids.index(id)+1}/#{current_ids.length})"
+    puts "Getting todo #{current_ids.index(id)+1} of #{current_ids.length}..."
     received_todo = HTTParty.get("http://lacedeamon.spartaglobal.com/todos/#{id}")
-    if local_ids.include? id
-    end
 
     Todo.all.each do |todo|
       if id == todo.id
-        todo.title = get_todo['title']
-        todo.due_date = Date.parseget_todo['due_date']
+        todo.title = received_todo['title']
+        todo.due_date = Date.parse(received_todo['due'])
         return
       end
     end
@@ -72,7 +78,7 @@ class Todo # :nodoc:
   end
 
   def self.generate_id(current_ids)
-    8380.upto(9000) { return id unless current_ids.include? id }
+    8380.upto(9000) { |id| return id unless current_ids.include? id }
     raise Error, 'No ids available. You must delete some todos.'
   end
 

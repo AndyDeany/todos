@@ -95,7 +95,7 @@ describe Todo do
       sent_data.push [
         todo.instance_variable_get('@id'),
         todo.title,
-        todo.due_date
+        todo.due_date.to_s
       ]
     end
     received_data = []
@@ -104,7 +104,7 @@ describe Todo do
       received_data.push [
         todo.instance_variable_get('@id'),
         todo.title,
-        todo.due_date
+        todo.due_date.to_s
       ]
     end
 
@@ -117,7 +117,7 @@ describe Todo do
     todo.title = 'Get some bread instead'
     Todo.sync
     expect(HTTParty.get(
-      "http://lacedeamon.spartaglobal.com/todos/#{todo.id}"
+      "http://lacedeamon.spartaglobal.com/todos/#{todo.instance_variable_get('@id')}"
     )['title']).to eq 'Get some bread instead'
   end
 end
