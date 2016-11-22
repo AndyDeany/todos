@@ -80,18 +80,20 @@ describe Todo do
   end
 
   it 'should allow us to sync with the online todos service' do
-    todo1 = Todo.new('Remember the milk')
-    todo2 = Todo.new('Buy a newspaper')
-    todo3 = Todo.new('Do the washing up')
-    todo4 = Todo.new('Buy some soya milk')
-    todo5 = Todo.new('Go to sleep')
-    todo6 = Todo.new('Remember the milk')
+    todos = [
+      Todo.new('Remember the milk'),
+      Todo.new('Buy a newspaper'),
+      Todo.new('Do the washing up'),
+      Todo.new('Buy some soya milk'),
+      Todo.new('Go to sleep'),
+      Todo.new('Remember the milk')
+    ]
     Todo.sync
     Todo.class_variable_set(:@@todos, [])
     Todo.sync
 
     sent_data = []
-    [todo1, todo2, todo3, todo4, todo5, todo6].each do |todo|
+    todos.each do |todo|
       sent_data.push [
         todo.instance_variable_get('@id'),
         todo.title,
@@ -99,7 +101,6 @@ describe Todo do
       ]
     end
     received_data = []
-    puts Todo.all.length
     Todo.all.each do |todo|
       received_data.push [
         todo.instance_variable_get('@id'),
@@ -107,15 +108,24 @@ describe Todo do
         todo.due_date.to_s
       ]
     end
-
     expect(sent_data - received_data).to eq []
+
+    todos.each do |todo|
+      HTTParty.delete(
+        'http://lacedeamon.spartaglobal.com/todos/'\
+        "#{todo.instance_variable_get('@id')}"
+      )
+    end
   end
 
   it 'should update the same todo in the server if a todo is updated' do
     todo = Todo.new('Remember the milk')
     Todo.sync
     todo.title = 'Get some bread instead'
+    sleep(60)
+    puts todo.title
     Todo.sync
+    puts todo.title
     expect(HTTParty.get(
       "http://lacedeamon.spartaglobal.com/todos/#{todo.instance_variable_get('@id')}"
     )['title']).to eq 'Get some bread instead'

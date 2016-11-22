@@ -8,6 +8,9 @@ class Todo # :nodoc:
 
   @@todos = []
 
+  @@current_ids = []
+  @@received_todos = []
+
   ## Getters
   def self.all
     @@todos.dup
@@ -34,27 +37,16 @@ class Todo # :nodoc:
   end
 
   def self.sync
-    attr_accessor :id
-    puts "Syncing todos..."
-    current_ids = get_current_ids
-    local_ids = Todo.all.collect { |todo| todo.id }
-    current_ids.each { |id| get_todo(id, local_ids, current_ids) }
-    Todo.all.each do |todo|
-      if todo.id.nil?
-        todo.id = HTTParty.post(
-          "http://lacedeamon.spartaglobal.com/todos?"\
-          "title=#{todo.title}&"\
-          "due=#{todo.due_date}"
-        )['id']
-      elsif not current_ids.include? todo.id # Only todos that we didn't just 'get' should be 'put'
-        HTTParty.put(
-          "http://lacedeamon.spartaglobal.com/todos/#{todo.id}?"\
-          "title=#{todo.title}&"\
-          "due=#{todo.due_date}"
-        )
-      end
-    end
-    undef :id, :id=
+    attr_accessor :id, :updated_at
+    puts "\n-----\nSyncing todos..."
+    puts "...\nDownloading todos..."
+    @@current_ids = get_current_ids
+    @@received_todos = []
+    @@current_ids.each { |id| get_todo(id) }
+    puts "...\nUploading todos..."
+    Todo.all.each { |todo| upload_todo(todo) }
+    puts "...\nSync complete.\n-----\n"
+    undef :id, :id=, :updated_at, :updated_at=
   end
 
   def self.get_current_ids
@@ -63,26 +55,53 @@ class Todo # :nodoc:
     ).collect { |todo| todo['id'] }
   end
 
-  def self.get_todo(id, local_ids, current_ids)
-    puts "Getting todo #{current_ids.index(id)+1} of #{current_ids.length}..."
-    received_todo = HTTParty.get("http://lacedeamon.spartaglobal.com/todos/#{id}")
+  def self.get_todo(id)
+    puts "Getting todo #{@@current_ids.index(id) + 1} of "\
+    "#{@@current_ids.length}..."
 
+    received_todo = HTTParty.get(
+      "http://lacedeamon.spartaglobal.com/todos/#{id}"
+    )
+    @@received_todos.push received_todo
     Todo.all.each do |todo|
-      if id == todo.id
+      #next unless ((id == todo.id) &&
+      #  (DateTime.parse(received_todo['updated_at']) > todo.updated_at))
+      if todo.title == 'Get some bread instead'
+        puts DateTime.parse(received_todo['updated_at']).to_s
+        puts todo.updated_at.to_s
+      end
+      if ((id == todo.id) and (DateTime.parse(received_todo['updated_at']) > todo.updated_at))
         todo.title = received_todo['title']
         todo.due_date = Date.parse(received_todo['due'])
-        return
+        return nil
       end
     end
-    Todo.new(received_todo['title'], Date.parse(received_todo['due']))
+    new_todo = Todo.new(received_todo['title'], Date.parse(received_todo['due']))
+    new_todo.id = received_todo['id']
+    new_todo.updated_at = DateTime.parse(received_todo['updated_at'])
   end
 
-  def self.generate_id(current_ids)
-    8380.upto(9000) { |id| return id unless current_ids.include? id }
-    raise Error, 'No ids available. You must delete some todos.'
+  def self.upload_todo(todo)
+    title = todo.title.gsub(' ', '%20')
+    due = todo.due_date.to_s
+    if todo.id.nil?
+      post = HTTParty.post(
+        'http://lacedeamon.spartaglobal.com/todos?'\
+        "title=#{title}&"\
+        "due=#{due}"
+      )
+      todo.id, todo.updated_at = post['id'], DateTime.parse(post['updated_at'])
+    elsif ((todo.updated_at > DateTime.parse(@@received_todos.select { |received_todo| received_todo['id'] == todo.id }[0]['updated_at'])) or
+      (not @@current_ids.include? todo.id)) # Only todos that we didn't just 'get' should be 'put'
+      HTTParty.put(
+        "http://lacedeamon.spartaglobal.com/todos/#{todo.id}?"\
+        "title=#{title}&"\
+        "due=#{due}"
+      )
+    end
   end
 
-  private_class_method :get_current_ids, :get_todo, :generate_id
+  private_class_method :get_current_ids, :get_todo, :upload_todo
 
   ### Instance methods and variables
   def initialize(title, due_date=Date.today)
@@ -92,6 +111,18 @@ class Todo # :nodoc:
     @id = nil
     @title = title
     @due_date = due_date
+    @updated_at = nil
     @@todos.push self
+  end
+
+  ## Setters
+  def title=(new_title)
+    @title = new_title
+    @updated_at = DateTime.now
+  end
+
+  def due_date=(new_date)
+    @due_date = new_date
+    @updated_at = DateTime.now
   end
 end
