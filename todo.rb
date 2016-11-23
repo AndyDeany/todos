@@ -64,12 +64,6 @@ class Todo # :nodoc:
     )
     @@received_todos.push received_todo
     Todo.all.each do |todo|
-      #next unless ((id == todo.id) &&
-      #  (DateTime.parse(received_todo['updated_at']) > todo.updated_at))
-      if todo.title == 'Get some bread instead'
-        puts DateTime.parse(received_todo['updated_at']).to_s
-        puts todo.updated_at.to_s
-      end
       if ((id == todo.id) and (DateTime.parse(received_todo['updated_at']) > todo.updated_at))
         todo.title = received_todo['title']
         todo.due_date = Date.parse(received_todo['due'])
