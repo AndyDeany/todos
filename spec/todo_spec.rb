@@ -118,16 +118,43 @@ describe Todo do
     end
   end
 
-  it 'should update the same todo in the server if a todo is updated' do
+  it 'should update the todo in the server if the local version is newer' do
     todo = Todo.new('Remember the milk')
     Todo.sync
+    sleep(30) # To ensure the new title is more recent, as system times (between computer and API) may differ slightly. Could possibly use timecop to save time.
     todo.title = 'Get some bread instead'
-    sleep(60)
-    puts todo.title
     Todo.sync
-    puts todo.title
+    expect(todo.title).to eq 'Get some bread instead'
     expect(HTTParty.get(
-      "http://lacedeamon.spartaglobal.com/todos/#{todo.instance_variable_get('@id')}"
+      'http://lacedeamon.spartaglobal.com/todos/'\
+      "#{todo.instance_variable_get('@id')}"
     )['title']).to eq 'Get some bread instead'
+
+    HTTParty.delete(
+        'http://lacedeamon.spartaglobal.com/todos/'\
+        "#{todo.instance_variable_get('@id')}"
+    )
+  end
+
+  it 'should update a local todo if the version in the server is newer' do
+    todo = Todo.new('Remember the milk')
+    Todo.sync
+    sleep(30) # To ensure the new title is more recent, as system times (between computer and API) may differ slightly. Could possibly use timecop to save time.
+    HTTParty.patch(
+      'http://lacedeamon.spartaglobal.com/todos/'\
+      "#{todo.instance_variable_get('@id')}?"\
+      "title=Get%20some%20bread%20instead"
+    )
+    Todo.sync
+    expect(HTTParty.get(
+      'http://lacedeamon.spartaglobal.com/todos/'\
+      "#{todo.instance_variable_get('@id')}"
+    )['title']).to eq 'Get some bread instead'
+    expect(todo.title).to eq 'Get some bread instead'
+
+    HTTParty.delete(
+        'http://lacedeamon.spartaglobal.com/todos/'\
+        "#{todo.instance_variable_get('@id')}"
+    )
   end
 end
