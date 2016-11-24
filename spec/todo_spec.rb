@@ -79,6 +79,7 @@ describe Todo do
     expect(Todo.find(exactly: 'Remember the milk')).to eq [todo1, todo6]
   end
 
+  # Todo.sync functionality
   it 'should allow us to sync with the online todos service' do
     todos = [
       Todo.new('Remember the milk'),
@@ -109,7 +110,7 @@ describe Todo do
       ]
     end
     expect(sent_data - received_data).to eq []
-
+    # Teardown
     todos.each do |todo|
       HTTParty.delete(
         'http://lacedeamon.spartaglobal.com/todos/'\
@@ -129,7 +130,7 @@ describe Todo do
       'http://lacedeamon.spartaglobal.com/todos/'\
       "#{todo.instance_variable_get('@id')}"
     )['title']).to eq 'Get some bread instead'
-
+    # Teardown
     HTTParty.delete(
         'http://lacedeamon.spartaglobal.com/todos/'\
         "#{todo.instance_variable_get('@id')}"
@@ -151,7 +152,7 @@ describe Todo do
       "#{todo.instance_variable_get('@id')}"
     )['title']).to eq 'Get some bread instead'
     expect(todo.title).to eq 'Get some bread instead'
-
+    # Teardown
     HTTParty.delete(
         'http://lacedeamon.spartaglobal.com/todos/'\
         "#{todo.instance_variable_get('@id')}"

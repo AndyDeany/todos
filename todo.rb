@@ -39,12 +39,15 @@ class Todo # :nodoc:
   def self.sync
     attr_accessor :id, :updated_at
     puts "\n-----\nSyncing todos..."
+
     puts "...\nDownloading todos..."
     @@current_ids = get_current_ids
     @@received_todos = []
     @@current_ids.each { |id| get_todo(id) }
+
     puts "...\nUploading todos..."
     Todo.all.each { |todo| upload_todo(todo) }
+
     puts "...\nSync complete.\n-----\n"
     undef :id, :id=, :updated_at, :updated_at=
   end
@@ -62,7 +65,7 @@ class Todo # :nodoc:
     received_todo = HTTParty.get(
       "http://lacedeamon.spartaglobal.com/todos/#{id}"
     )
-    @@received_todos.push received_todo
+    @@received_todos.push received_todo # Storing received todos so upload_todo() can use them
     Todo.all.each do |todo|
       if ((id == todo.id) and (DateTime.parse(received_todo['updated_at']) > todo.updated_at))
         todo.title = received_todo['title']
@@ -102,10 +105,12 @@ class Todo # :nodoc:
     unless title.is_a? String and due_date.is_a? Date
       raise ArgumentError, 'arguments must be a string and a Date object'
     end
-    @id = nil
     @title = title
     @due_date = due_date
+    # Attributes for the lacedeamon API
+    @id = nil
     @updated_at = nil
+
     @@todos.push self
   end
 
