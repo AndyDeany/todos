@@ -9,7 +9,7 @@ class Todo # :nodoc:
   @@todos = []
 
   @@current_ids = []
-  @@received_todos = []
+  @@server_todos = []
 
   ## Getters
   def self.all
@@ -42,7 +42,7 @@ class Todo # :nodoc:
 
     puts "...\nDownloading todos..."
     @@current_ids = get_current_ids
-    @@received_todos = []
+    @@server_todos = []
     @@current_ids.each { |id| get_todo(id) }
 
     puts "...\nUploading todos..."
@@ -62,43 +62,64 @@ class Todo # :nodoc:
     puts "Getting todo #{@@current_ids.index(id) + 1} of "\
     "#{@@current_ids.length}..."
 
-    received_todo = HTTParty.get(
-      "http://lacedeamon.spartaglobal.com/todos/#{id}"
-    )
-    @@received_todos.push received_todo # Storing received todos so upload_todo() can use them
+    server_todo = HTTParty.get("http://lacedeamon.spartaglobal.com/todos/#{id}")
+    @@server_todos.push server_todo # Storing server todos so upload_todo() can use them without needing to send more GET requests
+
     Todo.all.each do |todo|
-      if ((id == todo.id) and (DateTime.parse(received_todo['updated_at']) > todo.updated_at))
-        todo.title = received_todo['title']
-        todo.due_date = Date.parse(received_todo['due'])
-        return nil
-      end
+      next unless id == todo.id and not local_newer?(todo, server_todo)
+      update_local_todo(todo, server_todo)
+      return
     end
-    new_todo = Todo.new(received_todo['title'], Date.parse(received_todo['due']))
-    new_todo.id = received_todo['id']
-    new_todo.updated_at = DateTime.parse(received_todo['updated_at'])
+    create_local_todo(server_todo)
   end
 
   def self.upload_todo(todo)
     title = todo.title.gsub(' ', '%20')
     due = todo.due_date.to_s
     if todo.id.nil?
-      post = HTTParty.post(
-        'http://lacedeamon.spartaglobal.com/todos?'\
-        "title=#{title}&"\
-        "due=#{due}"
-      )
+      post = http_post(title, due)
       todo.id, todo.updated_at = post['id'], DateTime.parse(post['updated_at'])
-    elsif ((todo.updated_at > DateTime.parse(@@received_todos.select { |received_todo| received_todo['id'] == todo.id }[0]['updated_at'])) or
-      (not @@current_ids.include? todo.id)) # Only todos that we didn't just 'get' should be 'put'
-      HTTParty.put(
-        "http://lacedeamon.spartaglobal.com/todos/#{todo.id}?"\
-        "title=#{title}&"\
-        "due=#{due}"
-      )
+    elsif local_newer?(todo) or not @@current_ids.include? todo.id # Only todos that we didn't just 'get' should be 'put'
+      http_put(todo.id, title, due)
     end
   end
 
-  private_class_method :get_current_ids, :get_todo, :upload_todo
+  def self.update_local_todo(local, server)
+    local.title = server['title']
+    local.due_date = Date.parse(server['due'])
+  end
+
+  def self.create_local_todo(server)
+    new_todo = Todo.new(server['title'], Date.parse(server['due']))
+    new_todo.id = server['id']
+    new_todo.updated_at = DateTime.parse(server['updated_at'])
+  end
+
+  def self.http_post(title, due)
+    HTTParty.post(
+      'http://lacedeamon.spartaglobal.com/todos?'\
+      "title=#{title}&"\
+      "due=#{due}"
+    )
+  end
+
+  def self.http_put(id, title, due)
+    HTTParty.put(
+      "http://lacedeamon.spartaglobal.com/todos/#{id}?"\
+      "title=#{title}&"\
+      "due=#{due}"
+    )
+  end
+
+  def self.local_newer?(local, server=server_todo(local.id))
+    local.updated_at > DateTime.parse(server['updated_at'])
+  end
+
+  def self.server_todo(id)
+    @@server_todos.select { |todo| todo['id'] == id }[0]
+  end
+
+  private_class_method :get_current_ids, :get_todo, :upload_todo, :http_post, :http_put, :local_newer?
 
   ### Instance methods and variables
   def initialize(title, due_date=Date.today)

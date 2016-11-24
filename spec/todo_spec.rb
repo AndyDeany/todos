@@ -132,8 +132,8 @@ describe Todo do
     )['title']).to eq 'Get some bread instead'
     # Teardown
     HTTParty.delete(
-        'http://lacedeamon.spartaglobal.com/todos/'\
-        "#{todo.instance_variable_get('@id')}"
+      'http://lacedeamon.spartaglobal.com/todos/'\
+      "#{todo.instance_variable_get('@id')}"
     )
   end
 
@@ -144,7 +144,7 @@ describe Todo do
     HTTParty.patch(
       'http://lacedeamon.spartaglobal.com/todos/'\
       "#{todo.instance_variable_get('@id')}?"\
-      "title=Get%20some%20bread%20instead"
+      'title=Get%20some%20bread%20instead'
     )
     Todo.sync
     expect(HTTParty.get(
@@ -154,8 +154,8 @@ describe Todo do
     expect(todo.title).to eq 'Get some bread instead'
     # Teardown
     HTTParty.delete(
-        'http://lacedeamon.spartaglobal.com/todos/'\
-        "#{todo.instance_variable_get('@id')}"
+      'http://lacedeamon.spartaglobal.com/todos/'\
+      "#{todo.instance_variable_get('@id')}"
     )
   end
 end
