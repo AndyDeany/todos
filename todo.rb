@@ -78,7 +78,8 @@ class Todo # :nodoc:
     due = todo.due_date.to_s
     if todo.id.nil?
       post = http_post(title, due)
-      todo.id, todo.updated_at = post['id'], DateTime.parse(post['updated_at'])
+      todo.id = post['id']
+      todo.updated_at = DateTime.parse(post['updated_at'])
     elsif local_newer?(todo) or not @@current_ids.include? todo.id # Only todos that we didn't just 'get' should be 'put'
       http_put(todo.id, title, due)
     end
@@ -137,11 +138,13 @@ class Todo # :nodoc:
 
   ## Setters
   def title=(new_title)
+    raise ArgumentError, 'title must be a string' unless new_title.is_a? String
     @title = new_title
     @updated_at = DateTime.now
   end
 
   def due_date=(new_date)
+    raise ArgumentError, 'due_date must be a Date object' unless new_date.is_a? Date
     @due_date = new_date
     @updated_at = DateTime.now
   end
