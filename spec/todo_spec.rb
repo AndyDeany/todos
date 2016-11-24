@@ -32,14 +32,25 @@ describe Todo do
     expect(todo.title).to eq 'Forget the milk, get some bread'
   end
 
+  it 'should only allow us to assign strings to a todos title' do
+    todo = Todo.new('Remember the milk')
+    expect { todo.title = :not_a_string }.to raise_error(
+      ArgumentError, 'title must be a string'
+    )
+  end
+
   it 'should allow us to set the due_date of an existing todo' do
     todo = Todo.new('Remember the milk', Date.today)
     todo.due_date = Date.parse('21 Feb 2015')
     expect(todo.due_date).to eq Date.parse('21 Feb 2015')
   end
 
-  #it 'should only allow us to assign Date objects to due_date' do
-  #end
+  it 'should only allow us to assign Date objects to due_date' do
+    todo = Todo.new('Remember the milk')
+    expect { todo.due_date = 'Not Date Object' }.to raise_error(
+      ArgumentError, 'due_date must be a Date object'
+    )
+  end
 
   # Behaviour
   it 'should allow us to get an array of all instantiated todos' do
