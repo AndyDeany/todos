@@ -107,7 +107,7 @@ describe Todo do
     sent_data = []
     todos.each do |todo|
       sent_data.push [
-        todo.instance_variable_get('@id'),
+        todo.id,
         todo.title,
         todo.due_date.to_s
       ]
@@ -115,7 +115,7 @@ describe Todo do
     received_data = []
     Todo.all.each do |todo|
       received_data.push [
-        todo.instance_variable_get('@id'),
+        todo.id,
         todo.title,
         todo.due_date.to_s
       ]
@@ -123,10 +123,7 @@ describe Todo do
     expect(sent_data - received_data).to eq []
     # Teardown
     todos.each do |todo|
-      HTTParty.delete(
-        'http://lacedeamon.spartaglobal.com/todos/'\
-        "#{todo.instance_variable_get('@id')}"
-      )
+      HTTParty.delete(url("/#{todo.id}"))
     end
   end
 
@@ -137,36 +134,20 @@ describe Todo do
     todo.title = 'Get some bread instead'
     Todo.sync
     expect(todo.title).to eq 'Get some bread instead'
-    expect(HTTParty.get(
-      'http://lacedeamon.spartaglobal.com/todos/'\
-      "#{todo.instance_variable_get('@id')}"
-    )['title']).to eq 'Get some bread instead'
+    expect(HTTParty.get(url("/#{todo.id}"))['title']).to eq 'Get some bread instead'
     # Teardown
-    HTTParty.delete(
-      'http://lacedeamon.spartaglobal.com/todos/'\
-      "#{todo.instance_variable_get('@id')}"
-    )
+    HTTParty.delete(url("/#{todo.id}"))
   end
 
   it 'should update a local todo if the version in the server is newer' do
     todo = Todo.new('Remember the milk')
     Todo.sync
     sleep(30) # To ensure the new title is more recent, as system times (between computer and API) may differ slightly. Could possibly use timecop to save time.
-    HTTParty.patch(
-      'http://lacedeamon.spartaglobal.com/todos/'\
-      "#{todo.instance_variable_get('@id')}?"\
-      'title=Get%20some%20bread%20instead'
-    )
+    HTTParty.patch(url("/#{todo.id}?title=Get%20some%20bread%20instead"))
     Todo.sync
-    expect(HTTParty.get(
-      'http://lacedeamon.spartaglobal.com/todos/'\
-      "#{todo.instance_variable_get('@id')}"
-    )['title']).to eq 'Get some bread instead'
+    expect(HTTParty.get(url("/#{todo.id}"))['title']).to eq 'Get some bread instead'
     expect(todo.title).to eq 'Get some bread instead'
     # Teardown
-    HTTParty.delete(
-      'http://lacedeamon.spartaglobal.com/todos/'\
-      "#{todo.instance_variable_get('@id')}"
-    )
+    HTTParty.delete(url("/#{todo.id}"))
   end
 end

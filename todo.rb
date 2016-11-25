@@ -3,6 +3,7 @@ require 'httparty'
 
 class Todo # :nodoc:
   attr_accessor :title, :due_date
+  attr_reader :id
 
   ### Class methods and variables
 
@@ -43,37 +44,35 @@ class Todo # :nodoc:
     puts "...\nDownloading todos..."
     @@current_ids = get_current_ids
     @@server_todos = []
-    @@current_ids.each { |id| get_todo(id) }
+    @@current_ids.each { |id| get_todo id }
 
     puts "...\nUploading todos..."
-    Todo.all.each { |todo| upload_todo(todo) }
+    Todo.all.each { |todo| upload todo }
 
     puts "...\nSync complete.\n-----\n"
-    undef :id, :id=, :updated_at, :updated_at=
+    undef :id=, :updated_at, :updated_at=
   end
 
   def self.get_current_ids
-    HTTParty.get(
-      'http://lacedeamon.spartaglobal.com/todos'
-    ).collect { |todo| todo['id'] }
+    HTTParty.get(url).collect { |todo| todo['id'] }
   end
 
   def self.get_todo(id)
     puts "Getting todo #{@@current_ids.index(id) + 1} of "\
     "#{@@current_ids.length}..."
 
-    server_todo = HTTParty.get("http://lacedeamon.spartaglobal.com/todos/#{id}")
-    @@server_todos.push server_todo # Storing server todos so upload_todo() can use them without needing to send more GET requests
+    server_todo = HTTParty.get(url("/#{id}"))
+    @@server_todos.push server_todo # Storing server todos so upload() can use them without needing to send more GET requests
 
     Todo.all.each do |todo|
       next unless id == todo.id and not local_newer?(todo, server_todo)
-      update_local_todo(todo, server_todo)
+      update_todo(todo, server_todo)
       return
     end
-    create_local_todo(server_todo)
+    create_todo(server_todo)
   end
 
-  def self.upload_todo(todo)
+  def self.upload(todo)
     title = todo.title.gsub(' ', '%20')
     due = todo.due_date.to_s
     if todo.id.nil?
@@ -85,31 +84,23 @@ class Todo # :nodoc:
     end
   end
 
-  def self.update_local_todo(local, server)
+  def self.update_todo(local, server)
     local.title = server['title']
     local.due_date = Date.parse(server['due'])
   end
 
-  def self.create_local_todo(server)
+  def self.create_todo(server)
     new_todo = Todo.new(server['title'], Date.parse(server['due']))
     new_todo.id = server['id']
     new_todo.updated_at = DateTime.parse(server['updated_at'])
   end
 
   def self.post_todo(title, due)
-    HTTParty.post(
-      'http://lacedeamon.spartaglobal.com/todos?'\
-      "title=#{title}&"\
-      "due=#{due}"
-    )
+    HTTParty.post(url("?title=#{title}&due=#{due}"))
   end
 
   def self.put_todo(id, title, due)
-    HTTParty.put(
-      "http://lacedeamon.spartaglobal.com/todos/#{id}?"\
-      "title=#{title}&"\
-      "due=#{due}"
-    )
+    HTTParty.put(url("/#{id}?title=#{title}&due=#{due}"))
   end
 
   def self.local_newer?(local, server=find_server_todo(local.id))
@@ -120,7 +111,7 @@ class Todo # :nodoc:
     @@server_todos.select { |todo| todo['id'] == id }[0]
   end
 
-  private_class_method :get_current_ids, :get_todo, :upload_todo, :update_local_todo, :create_local_todo, :post_todo, :put_todo, :local_newer?, :find_server_todo
+  private_class_method :get_current_ids, :get_todo, :upload, :update_todo, :create_todo, :post_todo, :put_todo, :local_newer?, :find_server_todo
 
   ### Instance methods and variables
   def initialize(title, due_date=Date.today)
@@ -148,4 +139,9 @@ class Todo # :nodoc:
     @due_date = new_date
     @updated_at = DateTime.now
   end
+end
+
+#URL helper
+def url(path = '/')
+  "http://lacedeamon.spartaglobal.com/todos#{path}"
 end
