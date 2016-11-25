@@ -77,11 +77,11 @@ class Todo # :nodoc:
     title = todo.title.gsub(' ', '%20')
     due = todo.due_date.to_s
     if todo.id.nil?
-      post = http_post(title, due)
+      post = post_todo(title, due)
       todo.id = post['id']
       todo.updated_at = DateTime.parse(post['updated_at'])
     elsif local_newer?(todo) or not @@current_ids.include? todo.id # Only todos that we didn't just 'get' should be 'put'
-      http_put(todo.id, title, due)
+      put_todo(todo.id, title, due)
     end
   end
 
@@ -96,7 +96,7 @@ class Todo # :nodoc:
     new_todo.updated_at = DateTime.parse(server['updated_at'])
   end
 
-  def self.http_post(title, due)
+  def self.post_todo(title, due)
     HTTParty.post(
       'http://lacedeamon.spartaglobal.com/todos?'\
       "title=#{title}&"\
@@ -104,7 +104,7 @@ class Todo # :nodoc:
     )
   end
 
-  def self.http_put(id, title, due)
+  def self.put_todo(id, title, due)
     HTTParty.put(
       "http://lacedeamon.spartaglobal.com/todos/#{id}?"\
       "title=#{title}&"\
@@ -112,15 +112,15 @@ class Todo # :nodoc:
     )
   end
 
-  def self.local_newer?(local, server=server_todo(local.id))
+  def self.local_newer?(local, server=find_server_todo(local.id))
     local.updated_at > DateTime.parse(server['updated_at'])
   end
 
-  def self.server_todo(id)
+  def self.find_server_todo(id)
     @@server_todos.select { |todo| todo['id'] == id }[0]
   end
 
-  private_class_method :get_current_ids, :get_todo, :upload_todo, :http_post, :http_put, :local_newer?
+  private_class_method :get_current_ids, :get_todo, :upload_todo, :update_local_todo, :create_local_todo, :post_todo, :put_todo, :local_newer?, :find_server_todo
 
   ### Instance methods and variables
   def initialize(title, due_date=Date.today)
